@@ -300,3 +300,129 @@ h2 {
     bottom: 90px;
   }
 }
+
+/* ── Phone layout (≤ 600 px) ─────────────────────────────────────────────────
+   Order: cortisol gauges (side-by-side) → sprite (middle) → moves/messages
+   Everything must fit on one screen with minimal scrolling; tap-friendly.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Give the app shell less padding so we reclaim every pixel */
+  .app-shell {
+    padding: 4px;
+  }
+
+  /* Fill the real visible viewport (dvh handles iOS browser chrome) */
+  .battle-screen {
+    height: 100vh; /* fallback for older WebKit */
+    height: 100dvh;
+    padding: 4px;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .battle-header {
+    margin-bottom: 3px;
+  }
+
+  .battle-header h2 {
+    font-size: 13px;
+    margin: 0;
+  }
+
+  /* ── Cortisol gauges – side by side, compact ── */
+  .battle-hud {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .gauge-card {
+    padding: 3px 5px;
+  }
+
+  .gauge-card h3 {
+    font-size: 10px;
+    margin: 0 0 2px;
+  }
+
+  /* Hide the SVG semicircle; keep bar + number to save vertical space */
+  .gauge-svg {
+    display: none;
+  }
+
+  .cortisol-bar-wrap {
+    height: 10px;
+    margin-top: 2px;
+  }
+
+  .cortisol-number {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  /* ── Battle stage – column: sprite on top, battle-box on bottom ── */
+  .battle-stage {
+    padding: 4px;
+    gap: 6px;
+    /* already column + align-items stretch from the 900px rule */
+  }
+
+  /* Sprite slot fills all leftover vertical space */
+  .enemy-stage-slot {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .enemy-sprite {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    object-fit: contain;
+  }
+
+  .greek-burst-overlay {
+    bottom: 60px;
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  /* ── Battle box (moves / messages) – anchored at bottom ── */
+  .battle-box {
+    flex-shrink: 0;
+    margin-left: 0;
+    padding: 8px;
+    /* cap height so the sprite is always visible above */
+    max-height: 38vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Move buttons – 2-column grid, large tap targets ── */
+  .moves-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .pixel-button.move {
+    min-height: 44px;
+    font-size: 11px;
+    padding: 8px 4px;
+  }
+
+  .moves-panel h3 {
+    font-size: 12px;
+    margin: 0 0 6px;
+  }
+
+  /* Next / Play-again / Home buttons need a comfortable tap target */
+  .message-panel .pixel-button,
+  .end-panel .pixel-button {
+    min-height: 44px;
+  }
+
+  .end-buttons {
+    gap: 6px;
+  }
+}
