@@ -346,27 +346,34 @@ const forceEnemyStand = (state: BattleState, pushMessage: PushMessage): void => 
   }
 };
 
+const getAvailableEnemyMoveIds = (state: BattleState): string[] => {
+  const enemyMoveIds = state.character.enemyMoveIds;
+
+  if (!isShushMan(state)) {
+    return enemyMoveIds;
+  }
+
+  const filteredMoveIds = enemyMoveIds.filter((moveId) => moveId !== state.enemy.lastMoveId);
+  return filteredMoveIds.length > 0 ? filteredMoveIds : enemyMoveIds;
+};
+
 const selectEnemyMoveId = (state: BattleState, rng: () => number = Math.random): string => {
   const character = state.character;
+  const availableMoveIds = getAvailableEnemyMoveIds(state);
 
   if (typeof character.ai?.chooseEnemyMove === 'function') {
     return character.ai.chooseEnemyMove({
       state,
       rng,
-      enemyMoves: character.enemyMoveIds
+      enemyMoves: availableMoveIds
     });
   }
 
-  const availableMoveIds = isShushMan(state)
-    ? character.enemyMoveIds.filter((moveId) => moveId !== state.enemy.lastMoveId)
-    : character.enemyMoveIds;
   return availableMoveIds[0] ?? character.enemyMoveIds[0];
 };
 
 const sanitizeEnemyMoveId = (state: BattleState, moveId: string): string => {
-  const availableMoveIds = isShushMan(state)
-    ? state.character.enemyMoveIds.filter((candidateMoveId) => candidateMoveId !== state.enemy.lastMoveId)
-    : state.character.enemyMoveIds;
+  const availableMoveIds = getAvailableEnemyMoveIds(state);
   const fallbackMoveId = availableMoveIds[0] ?? state.character.enemyMoveIds[0] ?? 'shush';
 
   if (!state.character.enemyMoveIds.includes(moveId)) {
