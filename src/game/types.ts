@@ -26,6 +26,7 @@ export interface PlayerState {
   cortisol: number;
   phoneShield: boolean;
   reboundTargetMoveId: string | null;
+  lastMoveId: string | null;
 }
 
 export interface EnemyState {
@@ -39,6 +40,7 @@ export interface EnemyState {
 
 export interface BattleFlags {
   playerUsedPhoneThisTurn: boolean;
+  shushManStareTimer: number;
   exitDemandTurnsLeft: number;
   whistleLockActive: boolean;
   ignoredExitDemandCount: number;

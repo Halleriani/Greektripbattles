@@ -23,10 +23,6 @@ const shushMan: BattleCharacter = {
   },
   ai: {
     chooseEnemyMove: ({ state, rng }) => {
-      if (state.flags.playerUsedPhoneThisTurn && rng() < 0.5) {
-        return 'stare';
-      }
-
       if (!state.enemy.standing) {
         return 'shush';
       }
