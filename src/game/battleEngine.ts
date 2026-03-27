@@ -85,6 +85,8 @@ const maybeStandUpAtThreshold = (state: BattleState, forceStand: () => void): vo
   }
 };
 
+export const MOVES_WITH_REPEAT_RESTRICTION: ReadonlyArray<string> = ['rebound', 'goOnPhone'];
+
 export const PLAYER_MOVE_LIBRARY: Record<string, MoveDefinition> = {
   doNothing: {
     id: 'doNothing',
@@ -509,7 +511,7 @@ export const resolvePlayerMove = (
     return previousState;
   }
 
-  if (parsedMove.baseMoveId === state.player.lastMoveId) {
+  if (MOVES_WITH_REPEAT_RESTRICTION.includes(parsedMove.baseMoveId) && parsedMove.baseMoveId === state.player.lastMoveId) {
     return previousState;
   }
 

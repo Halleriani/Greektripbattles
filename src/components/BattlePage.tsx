@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getEnemyMoves, getPlayerMoves } from '../game/battleEngine';
+import { getEnemyMoves, getPlayerMoves, MOVES_WITH_REPEAT_RESTRICTION } from '../game/battleEngine';
 import type { BattleState } from '../game/types';
 import Gauge from './Gauge';
 
@@ -15,6 +15,7 @@ export default function BattlePage({ battle, onPlayAgain, onHome, onMove, onAdva
   const playerMoves = useMemo(() => getPlayerMoves(battle.character), [battle.character]);
   const enemyMoves = useMemo(() => getEnemyMoves(battle.character), [battle.character]);
   const [reboundPickerOpen, setReboundPickerOpen] = useState(false);
+  const [noRepeatNotice, setNoRepeatNotice] = useState<string | null>(null);
   const currentMessage = battle.messageQueue[0] ?? null;
   const enemyPosture = battle.enemy.standing ? 'standing' : 'sitting';
   const enemyAnimation = currentMessage?.enemyAnimation ?? 'idle';
@@ -29,7 +30,18 @@ export default function BattlePage({ battle, onPlayAgain, onHome, onMove, onAdva
     }
   }, [battle.phase, battle.turn]);
 
+  useEffect(() => {
+    setNoRepeatNotice(null);
+  }, [battle.turn]);
+
   const onChooseMove = (moveId: string): void => {
+    if (MOVES_WITH_REPEAT_RESTRICTION.includes(moveId) && battle.player.lastMoveId === moveId) {
+      setNoRepeatNotice("You can't use this move twice in a row!");
+      return;
+    }
+
+    setNoRepeatNotice(null);
+
     if (moveId === 'rebound') {
       setReboundPickerOpen(true);
       return;
@@ -103,6 +115,7 @@ export default function BattlePage({ battle, onPlayAgain, onHome, onMove, onAdva
                 </>
               )}
               {reboundTargetLabel && <p className="player-note">Rebound armed for: {reboundTargetLabel}</p>}
+              {noRepeatNotice && <p className="player-note">{noRepeatNotice}</p>}
             </div>
           )}
 
