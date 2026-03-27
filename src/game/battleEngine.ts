@@ -9,7 +9,7 @@ import type {
 
 export const MAX_CORTISOL = 100;
 const SHUSH_STAND_THRESHOLD = 50;
-const PHONE_MOVE_MISS_CHANCE = 0.3;
+const PHONE_MOVE_MISS_CHANCE = 0.2;
 const EXIT_DEMAND_DELAY_TURNS = 2;
 const EXIT_DEMAND_PENALTY = 10;
 
@@ -43,6 +43,7 @@ type EnemyAttackResult = {
 type EnemyMoveContext = {
   state: BattleState;
   attackPlayer: (baseDamage: number, ignoresPhoneShield: boolean, enemyMoveId: string) => EnemyAttackResult;
+  raiseCortisol: RaiseCortisol;
   pushMessage: PushMessage;
   getReveal: () => BattleMessage['reveal'];
 };
@@ -136,6 +137,7 @@ export const PLAYER_MOVE_LIBRARY: Record<string, MoveDefinition> = {
 
       state.player.phoneShield = true;
       state.flags.playerUsedPhoneThisTurn = true;
+      state.flags.shushManStareTimer = 2;
       pushMessage('You go on your phone. You are immune to the next attack unless it is Stare.', 'idle');
     }
   }
@@ -183,9 +185,10 @@ export const ENEMY_MOVE_LIBRARY: Record<string, EnemyMoveDefinition> = {
     label: 'Unintelligible Greek',
     baseDamage: 20,
     ignoresPhoneShield: false,
-    execute: ({ state, attackPlayer, pushMessage, getReveal }) => {
+    execute: ({ state, attackPlayer, raiseCortisol, pushMessage, getReveal }) => {
       pushMessage('ΑΥΤΟ ΤΙ ΚΑΝΕΙΣ ΕΔΩ ΡΕ ΠΑΙΔΙ ΜΟΥ?!', 'greek', 'greek-burst');
       pushMessage('He starts staring intensely.', 'stare');
+      raiseCortisol('enemy', 10);
 
       const result = attackPlayer(20, false, 'unintelligibleGreek');
 
@@ -310,7 +313,8 @@ export const createInitialBattleState = (character: BattleCharacter): BattleStat
   player: {
     cortisol: 0,
     phoneShield: false,
-    reboundTargetMoveId: null
+    reboundTargetMoveId: null,
+    lastMoveId: null
   },
   enemy: {
     cortisol: 0,
@@ -322,6 +326,7 @@ export const createInitialBattleState = (character: BattleCharacter): BattleStat
   },
   flags: {
     playerUsedPhoneThisTurn: false,
+    shushManStareTimer: 0,
     exitDemandTurnsLeft: 0,
     whistleLockActive: false,
     ignoredExitDemandCount: 0
@@ -352,11 +357,17 @@ const selectEnemyMoveId = (state: BattleState, rng: () => number = Math.random):
     });
   }
 
-  return character.enemyMoveIds[0];
+  const availableMoveIds = isShushMan(state)
+    ? character.enemyMoveIds.filter((moveId) => moveId !== state.enemy.lastMoveId)
+    : character.enemyMoveIds;
+  return availableMoveIds[0] ?? character.enemyMoveIds[0];
 };
 
 const sanitizeEnemyMoveId = (state: BattleState, moveId: string): string => {
-  const fallbackMoveId = state.character.enemyMoveIds[0] ?? 'shush';
+  const availableMoveIds = isShushMan(state)
+    ? state.character.enemyMoveIds.filter((candidateMoveId) => candidateMoveId !== state.enemy.lastMoveId)
+    : state.character.enemyMoveIds;
+  const fallbackMoveId = availableMoveIds[0] ?? state.character.enemyMoveIds[0] ?? 'shush';
 
   if (!state.character.enemyMoveIds.includes(moveId)) {
     return fallbackMoveId;
@@ -491,6 +502,10 @@ export const resolvePlayerMove = (
     return previousState;
   }
 
+  if (parsedMove.baseMoveId === state.player.lastMoveId) {
+    return previousState;
+  }
+
   let performedMoveId: string | null = parsedMove.baseMoveId;
 
   if (state.flags.whistleLockActive) {
@@ -514,6 +529,7 @@ export const resolvePlayerMove = (
       getReveal,
       selectedEnemyMoveId: parsedMove.selectedEnemyMoveId
     });
+    state.player.lastMoveId = parsedMove.baseMoveId;
   }
 
   processExitDemandAfterPlayerAction(state, performedMoveId, pushMessage, getReveal);
@@ -528,7 +544,8 @@ export const resolvePlayerMove = (
       applyEnemyCooldownAfterMove(state, 'skip');
       pushMessage(`${state.character.name} is distracted by your phone and skips this turn.`, 'idle');
     } else {
-      const desiredEnemyMoveId = selectEnemyMoveId(state, rng);
+      const desiredEnemyMoveId =
+        isShushMan(state) && state.flags.shushManStareTimer === 1 ? 'stare' : selectEnemyMoveId(state, rng);
       const enemyMoveId = sanitizeEnemyMoveId(state, desiredEnemyMoveId);
       const fallbackMoveId = state.character.enemyMoveIds[0] ?? 'shush';
       const enemyMoveDefinition = ENEMY_MOVE_LIBRARY[enemyMoveId] ?? ENEMY_MOVE_LIBRARY[fallbackMoveId] ?? ENEMY_MOVE_LIBRARY.shush;
@@ -537,9 +554,14 @@ export const resolvePlayerMove = (
       enemyMoveDefinition.execute({
         state,
         attackPlayer,
+        raiseCortisol: (target, amount) => raiseCortisol(state, target, amount),
         pushMessage,
         getReveal
       });
+
+      if (isShushMan(state) && state.flags.shushManStareTimer > 0) {
+        state.flags.shushManStareTimer -= 1;
+      }
 
       applyEnemyCooldownAfterMove(state, enemyMoveDefinition.id);
       maybeStandUpAtThreshold(state, forceStand);
